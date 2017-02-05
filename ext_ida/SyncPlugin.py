@@ -64,11 +64,12 @@ if not site_packages in sys.path:
     sys.path.insert(0, site_packages)
 
 try:
-    from PySide import QtGui
-    from PySide import QtCore
-    from PySide.QtCore import QProcess
+    from PyQt5 import QtGui
+    from PyQt5 import QtWidgets    
+    from PyQt5 import QtCore
+    from PyQt5.QtCore import QProcess,QProcessEnvironment
 except:
-    print "[-] failed to import Qt libs from PySide\n%s" % repr(sys.exc_info())
+    print "[-] failed to import Qt libs from PyQt5\n%s" % repr(sys.exc_info())
     sys.exit(0)
 
 try:
@@ -752,10 +753,9 @@ class Broker(QtCore.QProcess):
     def __init__(self, parser):
         QtCore.QProcess.__init__(self)
 
-        sig = QtCore.SIGNAL
-        self.connect(self, sig("error(QProcess::ProcessError"), self.cb_on_error)
-        self.connect(self, sig("readyReadStandardOutput()"),  self.cb_broker_on_out)
-        self.connect(self, sig("stateChanged(ProcessState)"),  self.cb_broker_on_state_change)
+        self.readyReadStandardOutput.connect(self.cb_broker_on_out)
+        self.stateChanged.connect(self.cb_broker_on_state_change)
+        self.error.connect(self.cb_on_error)
 
         # Create a request handler
         self.worker = RequestHandler(parser)
@@ -982,15 +982,15 @@ class SyncForm_t(PluginForm):
         print "[*] init broker,", cmdline
 
         self.broker = Broker(self.parser)
-        env = QProcess.systemEnvironment()
-        env.append("IDB_PATH=%s" % IDB_PATH)
-        env.append("PYTHON_PATH=%s" % os.path.realpath(PYTHON_PATH))
-        env.append("PYTHON_BIN=%s" % PYTHON_BIN)
+        env = QProcessEnvironment.systemEnvironment()
+        env.insert("IDB_PATH", IDB_PATH)
+        env.insert("PYTHON_PATH", os.path.realpath(PYTHON_PATH))
+        env.insert("PYTHON_BIN", PYTHON_BIN)
 
         try:
-            self.broker.connect(self.broker, QtCore.SIGNAL("started()"),  self.cb_broker_started)
-            self.broker.connect(self.broker, QtCore.SIGNAL("finished(int)"),  self.cb_broker_finished)
-            self.broker.setEnvironment(env)
+            self.broker.started.connect(self.cb_broker_started)
+            self.broker.finished.connect(self.cb_broker_finished)
+            self.broker.setProcessEnvironment(env)
             self.broker.start(cmdline)
         except Exception as e:
             print "[-] failed to start broker: %s\n%s" % (str(e), traceback.format_exc())
@@ -1051,15 +1051,15 @@ class SyncForm_t(PluginForm):
         print "[sync] form create"
 
         # Get parent widget
-        parent = self.FormToPySideWidget(form)
+        parent = self.FormToPyQtWidget(form)
 
         # Create checkbox
-        self.cb = QtGui.QCheckBox("Synchronization enable")
+        self.cb = QtWidgets.QCheckBox("Synchronization enable")
         self.cb.move(20, 20)
         self.cb.stateChanged.connect(self.cb_change_state)
 
         # Create label
-        label = QtGui.QLabel('Overwrite idb name:')
+        label = QtWidgets.QLabel('Overwrite idb name:')
 
         # Check in conf for name overwrite
         name = idaapi.get_root_filename()
@@ -1072,18 +1072,18 @@ class SyncForm_t(PluginForm):
                 print "[sync] overwrite idb name with %s" % name
 
         # Create input field
-        self.input = QtGui.QLineEdit(parent)
+        self.input = QtWidgets.QLineEdit(parent)
         self.input.setText(name)
         self.input.setMaxLength = 256
         self.input.setFixedWidth(300)
 
         # Create restart button
-        self.btn = QtGui.QPushButton('restart', parent)
+        self.btn = QtWidgets.QPushButton('restart', parent)
         self.btn.setToolTip('Restart broker.')
         self.btn.clicked.connect(self.cb_btn_restart)
 
         # Create layout
-        layout = QtGui.QGridLayout()
+        layout = QtWidgets.QGridLayout()
         layout.addWidget(self.cb)
         layout.addWidget(label)
         layout.addWidget(self.input)
