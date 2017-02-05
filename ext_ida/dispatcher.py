@@ -21,6 +21,7 @@
 # -*- coding: utf-8 -*-
 
 import os
+import ntpath
 import sys
 import socket
 import select
@@ -379,7 +380,13 @@ class DispatcherSrv():
     # dbg notice that its current module has changed
     def req_module(self, s, hash):
         modpath = hash['path']
-        self.current_module = modname = os.path.basename(modpath)
+
+	# if the module path contains backslashes, assume that it is a windows path
+	if modpath.find("\\") != -1:
+	    self.current_module = modname = ntpath.basename(modpath)
+	else:
+	    self.current_module = modname = os.path.basename(modpath)
+	
         matching = [idbc for idbc in self.idb_clients if (idbc.name.lower() == modname.lower())]
 
         if not self.sync_mode_auto:
